@@ -1,4 +1,2 @@
 $TRACE_ON
-
-    { while (b) a= 34; }
-
+SELECT nome, salario, cargo FROM empregados WHERE setor = "RH" AND cidade = "São Paulo";

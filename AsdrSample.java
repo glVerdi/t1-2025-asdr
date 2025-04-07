@@ -3,189 +3,117 @@ import java.io.*;
 public class AsdrSample {
 
   private static final int BASE_TOKEN_NUM = 301;
-  
-  public static final int IDENT  = 301;
-  public static final int NUM 	 = 302;
-  public static final int WHILE  = 303;
-  public static final int IF	 = 304;
-  public static final int FI	 = 305;
-  public static final int ELSE = 306;
 
-    public static final String tokenList[] = 
-      {"IDENT",
-		 "NUM", 
-		 "WHILE", 
-		 "IF", 
-		 "FI",
-		 "ELSE"  };
-                                      
-  /* referencia ao objeto Scanner gerado pelo JFLEX */
+  public static final int IDENT = 301;
+  public static final int STRING = 302;
+  public static final int SELECT = 303;
+  public static final int FROM = 304;
+  public static final int WHERE = 305;
+  public static final int AND = 306;
+  public static final int ASTERISCO = 307;
+  public static final int EQUALS = 308;
+  public static final int PONTO_VIRGULA = 309;
+
+  public static final String[] tokenList = {
+    "IDENT", "STRING", "SELECT", "FROM", "WHERE", "AND", "ASTERISCO", "EQUALS", "PONTO_VIRGULA"
+  };
+
   private Yylex lexer;
-
   public ParserVal yylval;
-
   private static int laToken;
   private boolean debug;
 
-  
-  /* construtor da classe */
-  public AsdrSample (Reader r) {
-      lexer = new Yylex (r, this);
+  public AsdrSample(Reader r) {
+    lexer = new Yylex(r, this);
   }
-
-  /***** Gramática original 
-  Prog -->  Bloco
-
-  Bloco --> { Cmd }
-
-  Cmd --> Bloco
-      | while ( E ) Cmd
-      | ident = E ;
-      | if ( E ) Cmd 
-      | if ( E ) Cmd else Cmd 
-
-  E --> IDENT
-   | NUM
-   | ( E )
-***/  
-
-  /***** Gramática 'fatorada' 
-  Prog -->  Bloco
-
-  Bloco --> { Cmd }
-
-  Cmd --> Bloco
-      | while ( E ) Cmd
-      | ident = E ;
-      | if ( E ) Cmd RestoIf   // 'fatorada à esquerda'
-      
-   RestoIf --> else Cmd 
-            | 
-
-  E --> E + T
-      | T
-
-  T --> IDENT
-   | NUM
-   | ( E )
-***/ 
 
   private void Prog() {
-      if (laToken == '{') {
-         if (debug) System.out.println("Prog --> Bloco");
-         Bloco();
-      }
-      else 
-        yyerror("esperado '{'");
-   }
-
-  private void Bloco() {
-      if (debug) System.out.println("Bloco --> { Cmd }");
-      //if (laToken == '{') {
-         verifica('{');
-         Cmd();
-         verifica('}');
-      //}
+    if (laToken == SELECT) {
+      if (debug) System.out.println("Prog -> SELECT ListaColunas FROM Tabela CondicaoOpcional ;");
+      verifica(SELECT);
+      ListaColunas();
+      verifica(FROM);
+      Tabela();
+      CondicaoOpcional();
+      verifica(PONTO_VIRGULA);
+    } else {
+      yyerror("Esperado SELECT no início da consulta.");
+    }
   }
 
-  private void Cmd() {
-      if (laToken == '{') {
-         if (debug) System.out.println("Cmd --> Bloco");
-         Bloco();
-	   }    
-      else if (laToken == WHILE) {
-         if (debug) System.out.println("Cmd --> WHILE ( E ) Cmd");
-         verifica(WHILE);    // laToken = this.yylex(); 
-  		   verifica('(');
-  		   E();
-         verifica(')');
-         Cmd();
-	   }
-      else if (laToken == IDENT ) {
-         if (debug) System.out.println("Cmd --> IDENT = E ;");
-            verifica(IDENT);  
-            verifica('='); 
-            E();
-		      verifica(';');
-	   }
-    else if (laToken == IF) {
-         if (debug) System.out.println("Cmd --> if (E) Cmd RestoIF");
-         verifica(IF);
-         verifica('(');
-  		   E();
-         verifica(')');
-         Cmd();
-         RestoIF();
-	   }
- 	else yyerror("Esperado {, if, while ou identificador");
-   }
+  private void ListaColunas() {
+    if (laToken == ASTERISCO) {
+      if (debug) System.out.println("ListaColunas -> *");
+      verifica(ASTERISCO);
+    } else if (laToken == IDENT) {
+      if (debug) System.out.println("ListaColunas -> Coluna ListaColunas'");
+      Coluna();
+      ListaColunasLinha();
+    } else {
+      yyerror("Esperado '*' ou identificador na lista de colunas.");
+    }
+  }
 
+  private void ListaColunasLinha() {
+    if (laToken == ',') {
+      if (debug) System.out.println("ListaColunasLinha -> , Coluna ListaColunasLinha");
+      verifica(',');
+      Coluna();
+      ListaColunasLinha();
+    } else {
+      if (debug) System.out.println("ListaColunasLinha -> (vazio)");
+    }
+  }
 
-   private void RestoIF() {
-       if (laToken == ELSE) {
-         if (debug) System.out.println("RestoIF --> else Cmd FI ");
-         verifica(ELSE);
-         Cmd();
-         
-    
-	   } else {
-         if (debug) System.out.println("RestoIF -->  (*vazio*)  ");
-         // aceitar como vazio  <-- my way
-         // ou testar o follow de RestoIF
-         }
-     }     
+  private void Coluna() {
+    if (laToken == IDENT) {
+      if (debug) System.out.println("Coluna -> IDENT");
+      verifica(IDENT);
+    } else {
+      yyerror("Esperado identificador em Coluna");
+    }
+  }
 
-   private void E() {
-         if (laToken == IDENT || laToken == NUM || laToken == '(') {
-          if (debug) System.out.println("E --> T R");
-         T();
-         R();
-         }
-         else yyerror("Esperado operando (, identificador ou numero");
-      }
-      
+  private void Tabela() {
+    if (laToken == IDENT) {
+      if (debug) System.out.println("Tabela -> IDENT");
+      verifica(IDENT);
+    } else {
+      yyerror("Esperado identificador em Tabela");
+    }
+  }
 
-   private void R() {
-      if (laToken == '+') {
-         if (debug) System.out.println("R --> + T R");
-         verifica('+');
-         T();
-         R();
-      }
-      else   if (laToken == '-') {
-         if (debug) System.out.println("R --> - T R");
-         verifica('-');
-         T();
-         R();
-      }
-      else {
-         if (debug) System.out.println("R -->  (*vazio*)  ");
-         // aceitar como vazio  <-- my way
-         // ou testar o follow de R
-         }
-   }  
+  private void CondicaoOpcional() {
+    if (laToken == WHERE) {
+      if (debug) System.out.println("CondicaoOpcional -> WHERE Condicao");
+      verifica(WHERE);
+      Condicao();
+    } else {
+      if (debug) System.out.println("CondicaoOpcional -> (vazio)");
+    }
+  }
 
+  private void Condicao() {
+    if (debug) System.out.println("Condicao -> Coluna = STRING CondicaoLinha");
+    Coluna();
+    verifica(EQUALS);
+    if (laToken == STRING) {
+      verifica(STRING);
+      CondicaoLinha();
+    } else {
+      yyerror("Esperado valor string após '=' em Condicao");
+    }
+  }
 
-
-
-  private void T() {
-      if (laToken == IDENT) {
-         if (debug) System.out.println("T --> IDENT");
-         verifica(IDENT);
-	   }
-      else if (laToken == NUM) {
-         if (debug) System.out.println("T --> NUM");
-         verifica(NUM);
-	   }
-      else if (laToken == '(') {
-         if (debug) System.out.println("T --> ( E )");
-         verifica('(');
-         E();        
-		 verifica(')');
-	   }
- 	else yyerror("Esperado operando (, identificador ou numero");
-   }
-
+  private void CondicaoLinha() {
+    if (laToken == AND) {
+      if (debug) System.out.println("CondicaoLinha -> && Condicao");
+      verifica(AND);
+      Condicao();
+    } else {
+      if (debug) System.out.println("CondicaoLinha -> (vazio)");
+    }
+  }
 
   private void verifica(int expected) {
       if (laToken == expected)
@@ -206,7 +134,6 @@ public class AsdrSample {
      }
    }
 
-   /* metodo de acesso ao Scanner gerado pelo JFLEX */
    private int yylex() {
        int retVal = -1;
        try {
@@ -218,7 +145,6 @@ public class AsdrSample {
        return retVal; //retorna o token para o Parser 
    }
 
-  /* metodo de manipulacao de erros de sintaxe */
   public void yyerror (String error) {
      System.err.println("Erro: " + error);
      System.err.println("Entrada rejeitada");
@@ -231,18 +157,7 @@ public class AsdrSample {
       debug = true;
   }
 
-
-  /**
-   * Runs the scanner on input files.
-   *
-   * This main method is the debugging routine for the scanner.
-   * It prints debugging information about each returned token to
-   * System.out until the end of file is reached, or an error occured.
-   *
-   * @param args   the command line, contains the filenames to run
-   *               the scanner on.
-   */
-  public static void main(String[] args) {
+   public static void main(String[] args) {
      AsdrSample parser = null;
      try {
          if (args.length == 0)
@@ -264,17 +179,5 @@ public class AsdrSample {
         catch (java.io.FileNotFoundException e) {
           System.out.println("File not found : \""+args[0]+"\"");
         }
-//        catch (java.io.IOException e) {
-//          System.out.println("IO error scanning file \""+args[0]+"\"");
-//          System.out.println(e);
-//        }
-//        catch (Exception e) {
-//          System.out.println("Unexpected exception:");
-//          e.printStackTrace();
-//      }
-    
   }
-  
 }
-
-

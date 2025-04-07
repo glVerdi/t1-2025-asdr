@@ -15,32 +15,36 @@
 %line
 %char
 
-WHITE_SPACE_CHAR=[\n\r\ \t\b\012]
+WHITE_SPACE_CHAR = [\n\r\ \t\b\012]
+
+IDENT = [a-zA-Z][a-zA-Z0-9]*
+STRING = '\''([^\']|\\')*'\'
+
+SELECT = "SELECT"
+FROM = "FROM"
+WHERE = "WHERE"
+AND = "&&"
+ASTERISCO = "*"
+EQUALS = "="
+PONTO_VIRGULA = ";"
 
 %%
 
-"$TRACE_ON"   { yyparser.setDebug(true); }
-"$TRACE_OFF"  { yyparser.setDebug(false); }
+"$TRACE_ON"    { yyparser.setDebug(true); }
+"$TRACE_OFF"   { yyparser.setDebug(false); }
 
-"while"	 	{ return AsdrSample.WHILE; }
-"if"		{ return AsdrSample.IF; }
-"else"		{ return AsdrSample.ELSE; }
-"fi"		{ return AsdrSample.FI; }
+SELECT         { return AsdrSample.SELECT; }
+FROM           { return AsdrSample.FROM; }
+WHERE          { return AsdrSample.WHERE; }
+&&              { return AsdrSample.AND; }
+"*"             { return AsdrSample.ASTERISCO; }
+"="             { return AsdrSample.EQUALS; }
+";"             { return AsdrSample.PONTO_VIRGULA; }
 
-[:jletter:][:jletterdigit:]* { return AsdrSample.IDENT; }  
+{IDENT}         { return AsdrSample.IDENT; }
 
-[0-9]+ 	{ return AsdrSample.NUM; }
+{STRING}        { return AsdrSample.STRING; }
 
-"{" |
-"}" |
-";" |
-"(" |
-")" |
-"+" |
-"-" |
-"="    	{ return yytext().charAt(0); } 
-
-
-{WHITE_SPACE_CHAR}+ { }
+{WHITE_SPACE_CHAR}+ {}
 
 . { System.out.println("Erro lexico: caracter invalido: <" + yytext() + ">"); }

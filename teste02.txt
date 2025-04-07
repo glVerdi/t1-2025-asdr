@@ -1,4 +1,2 @@
 $TRACE_ON
-    { a = ((( 34 ))); }
-
-
+SELECT nome FROM funcionarios WHERE departamento = "TI";
